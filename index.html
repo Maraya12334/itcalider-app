@@ -1,0 +1,729 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="theme-color" content="#f5f7fb">
+  <title>ITCalider | Plataforma Académica</title>
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #17233d;
+      --muted: #778198;
+      --line: #e9edf4;
+      --paper: #fff;
+      --canvas: #f5f7fb;
+      --blue: #4568e8;
+      --blue-soft: #edf1ff;
+      --mint: #e8f7f1;
+      --amber: #fff4df;
+      --rose: #fff0ef;
+      --shadow: 0 12px 34px rgba(32, 48, 86, .055);
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+    }
+    * { box-sizing: border-box; }
+    html, body { margin: 0; min-height: 100%; }
+    body { background: var(--canvas); color: var(--ink); }
+    button, input, select, textarea { font: inherit; }
+    button { cursor: pointer; }
+    .app { display: flex; min-height: 100vh; }
+    .sidebar { width: 252px; background: var(--paper); border-right: 1px solid var(--line); padding: 26px 18px 20px; display: flex; flex-direction: column; gap: 12px; }
+    .brand { display: flex; align-items: center; gap: 12px; padding: 0 10px 20px; }
+    .brand-mark { width: 40px; height: 40px; border-radius: 13px; display: grid; place-items: center; background: linear-gradient(145deg,#6685ff,#3d5dd8); color: white; font-weight: 800; }
+    .brand-name { font-size: 16px; font-weight: 760; }
+    .brand-sub { color: var(--muted); font-size: 11px; }
+    .nav-label { color: #a0a8b8; font-size: 10px; font-weight: 750; letter-spacing: 1.1px; padding: 8px 12px 6px; text-transform: uppercase; }
+    .nav-btn { width: 100%; background: transparent; border: 0; border-radius: 10px; color: #69758e; display: flex; align-items: center; gap: 12px; padding: 11px 12px; text-align: left; font-size: 13px; }
+    .nav-btn.active { background: var(--blue-soft); color: var(--blue); font-weight: 690; }
+    .nav-icon { width: 20px; display: inline-block; text-align: center; }
+    .sidebar-spacer { flex: 1; }
+    .help-card { background: #f7f8fc; border: 1px solid #eef0f5; border-radius: 12px; padding: 12px; }
+    .help-card strong { display: block; font-size: 12px; margin-bottom: 4px; }
+    .help-card p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.55; }
+    .profile-mini { display: flex; align-items: center; gap: 10px; border-top: 1px solid var(--line); padding-top: 15px; }
+    .avatar { width: 35px; height: 35px; border-radius: 50%; background: #e9edff; color: #5268ce; display: grid; place-items: center; font-size: 11px; font-weight: 750; }
+    .profile-mini strong { display: block; font-size: 12px; }
+    .profile-mini small { display: block; color: var(--muted); font-size: 10px; margin-top: 3px; }
+    .logout-btn { background: transparent; border: 0; border-radius: 8px; color: #778198; font-size: 10px; text-align: left; padding: 8px; margin-top: 8px; }
+    .logout-btn:hover { background: #fff0ef; color: #bd5550; }
+    main { flex: 1; min-width: 0; }
+    .topbar { height: 72px; display: flex; align-items: center; justify-content: space-between; padding: 0 clamp(22px,4vw,54px); border-bottom: 1px solid var(--line); background: rgba(255,255,255,.84); backdrop-filter: blur(12px); position: sticky; top: 0; z-index: 10; }
+    .crumb { color: var(--muted); font-size: 12px; }
+    .crumb strong { color: var(--ink); }
+    .mobile-menu { display: none; background: transparent; border: 0; color: var(--ink); font-size: 18px; margin-right: 8px; }
+    .top-actions { display: flex; align-items: center; gap: 12px; }
+    .icon-btn { border: 0; background: transparent; color: #68748c; font-size: 19px; position: relative; }
+    .notification-dot { position: absolute; top: 0; right: -2px; width: 8px; height: 8px; border-radius: 50%; background: #f47a70; border: 2px solid white; }
+    .content { max-width: 1320px; margin: 0 auto; padding: 35px clamp(22px,4vw,54px) 55px; }
+    .welcome-row { display: flex; justify-content: space-between; align-items: flex-end; margin-bottom: 24px; }
+    .eyebrow { color: var(--blue); font-size: 11px; letter-spacing: .76px; text-transform: uppercase; font-weight: 750; margin-bottom: 9px; }
+    h1 { margin: 0; font-size: clamp(25px,3vw,32px); letter-spacing: -.08em; }
+    .welcome-row p { margin: 8px 0 0; color: var(--muted); font-size: 13px; }
+    .date-chip { background: white; border: 1px solid var(--line); border-radius: 10px; color: #536079; font-size: 11px; padding: 10px 13px; }
+    .notice-banner { display: flex; align-items: center; gap: 12px; background: #edf2ff; border: 1px solid #e4eaff; border-radius: 13px; padding: 14px 17px; margin-bottom: 23px; }
+    .notice-symbol { width: 36px; height: 36px; display: grid; place-items: center; background: white; border-radius: 10px; color: var(--blue); }
+    .notice-copy { flex: 1; }
+    .notice-copy strong { display: block; font-size: 12px; margin-bottom: 4px; }
+    .notice-copy span { color: #697694; font-size: 11px; }
+    .text-button { background: none; border: 0; color: var(--blue); font-size: 11px; font-weight: 700; }
+    .stats { display: grid; gap: 15px; grid-template-columns: repeat(4, minmax(0,1fr)); margin-bottom: 22px; }
+    .stat-card, .panel { background: var(--paper); border: 1px solid var(--line); border-radius: 14px; box-shadow: var(--shadow); }
+    .stat-card { min-height: 120px; padding: 18px; }
+    .stat-top { display: flex; align-items: center; justify-content: space-between; color: var(--muted); font-size: 11px; }
+    .stat-icon { width: 31px; height: 31px; border-radius: 9px; display: grid; place-items: center; background: var(--blue-soft); color: var(--blue); }
+    .stat-card:nth-child(2) .stat-icon { background: var(--mint); color: #288466; }
+    .stat-card:nth-child(3) .stat-icon { background: var(--amber); color: #b17b24; }
+    .stat-card:nth-child(4) .stat-icon { background: var(--rose); color: #ca605b; }
+    .stat-value { margin-top: 11px; font-size: 25px; font-weight: 760; letter-spacing: -.06em; }
+    .stat-foot { margin-top: 4px; color: var(--muted); font-size: 10px; }
+    .dashboard-grid { display: grid; grid-template-columns: minmax(0,1.55fr) minmax(275px,1fr); gap: 18px; }
+    .panel + .panel { margin-top: 18px; }
+    .panel-head { display: flex; justify-content: space-between; align-items: center; padding: 18px 20px 15px; }
+    .panel-title { font-size: 13px; font-weight: 730; }
+    .panel-subtitle { color: var(--muted); font-size: 10px; margin-top: 4px; }
+    .link-button { background: none; border: 0; color: var(--blue); padding: 5px; font-size: 10px; font-weight: 700; }
+    .small-btn, .primary-btn, .secondary-btn { border-radius: 10px; border: 0; padding: 10px 12px; font-size: 11px; font-weight: 700; }
+    .primary-btn { background: var(--blue); color: white; }
+    .small-btn { background: #eef2ff; color: var(--blue); border: 1px solid #dfe7ff; }
+    .secondary-btn { background: transparent; border: 1px solid var(--line); color: var(--ink); }
+    .schedule-list, .activity-list, .notice-feed, .forum-list, .table-wrap { padding: 0 20px 20px; }
+    .class-row { display: grid; grid-template-columns: 70px 3px minmax(0,1fr) auto; gap: 12px; align-items: stretch; padding: 8px 0; }
+    .class-time { color: var(--muted); font-size: 11px; }
+    .class-stripe { background: linear-gradient(180deg,#90a8ff,#dce3ff); border-radius: 99px; }
+    .class-info { display: flex; flex-direction: column; }
+    .class-info strong { font-size: 12px; }
+    .class-info span { color: var(--muted); font-size: 10px; margin-top: 4px; }
+    .room-tag, .badge { display: inline-flex; align-items: center; justify-content: center; padding: 6px 9px; border-radius: 999px; font-size: 10px; }
+    .room-tag { background: #f5f7fb; border: 1px solid var(--line); }
+    .badge { background: #edf2ff; border: 1px solid #dfe7ff; color: var(--blue); }
+    .badge.pending { background: #fff5df; border-color: #f8e7bf; color: #b17b24; }
+    .activity-row { display: grid; grid-template-columns: 56px minmax(0,1fr) auto; gap: 12px; align-items: center; padding: 8px 0; }
+    .activity-date { min-height: 62px; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f5f7fb; border: 1px solid var(--line); border-radius: 12px; }
+    .activity-date span { color: var(--muted); font-size: 9px; }
+    .activity-date strong { font-size: 18px; }
+    .activity-copy { display: flex; flex-direction: column; }
+    .activity-copy strong { font-size: 12px; }
+    .activity-copy span { color: var(--muted); font-size: 10px; }
+    .notice-item, .feed-card, .forum-card { background: #f9fbff; border: 1px solid var(--line); border-radius: 12px; padding: 13px 14px; }
+    .notice-item { display: flex; gap: 12px; }
+    .notice-bullet { width: 30px; height: 30px; display: grid; place-items: center; background: #edf2ff; border-radius: 10px; color: var(--blue); }
+    .notice-item strong, .feed-card h3, .forum-card h3 { font-size: 13px; margin: 0 0 5px; }
+    .notice-item p, .feed-card p, .forum-card p { margin: 0; color: var(--muted); font-size: 11px; line-height: 1.55; }
+    .feed-meta { display: flex; flex-wrap: wrap; gap: 6px; color: var(--muted); font-size: 10px; margin-bottom: 8px; }
+    .feed-tag { display: inline-block; padding: 4px 8px; border-radius: 999px; background: #eef2ff; color: var(--blue); font-weight: 700; }
+    .teacher-note { margin: 0 20px 12px; background: #f9f5e8; border: 1px solid #f1e3b6; border-radius: 12px; color: #8b6b1f; font-size: 11px; line-height: 1.5; padding: 10px 12px; }
+    .table-wrap { overflow-x: auto; }
+    table { width: 100%; border-collapse: collapse; }
+    th, td { padding: 12px 8px; border-bottom: 1px solid var(--line); font-size: 11px; text-align: left; }
+    th { color: var(--muted); font-weight: 700; }
+    .empty { color: var(--muted); font-size: 11px; padding: 18px 2px; }
+    .search-box { margin: 0 20px 16px; border: 1px solid var(--line); background: #f9fafc; border-radius: 10px; padding: 10px 12px; width: calc(100% - 40px); }
+    .toast { position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%) translateY(8px); opacity: 0; background: #182849; color: white; font-size: 12px; padding: 10px 14px; border-radius: 10px; pointer-events: none; transition: .2s ease; z-index: 30; }
+    .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+    .modal-backdrop { position: fixed; inset: 0; background: rgba(20, 28, 40, .42); display: flex; justify-content: center; align-items: center; z-index: 25; padding: 20px; }
+    .modal { width: min(94vw, 540px); background: white; border-radius: 16px; border: 1px solid var(--line); box-shadow: var(--shadow); padding: 20px; }
+    .modal h2 { margin: 0 0 8px; font-size: 20px; }
+    .modal p { margin: 0 0 16px; color: var(--muted); font-size: 11px; line-height: 1.6; }
+    .modal label { display: block; color: #4f5b73; font-size: 10px; font-weight: 680; margin: 12px 0 7px; }
+    .modal input, .modal textarea, .modal select { width: 100%; border: 1px solid #e4e8f0; border-radius: 9px; padding: 11px 12px; font-size: 12px; }
+    .modal textarea { min-height: 100px; resize: vertical; }
+    .modal-actions { display: flex; gap: 10px; justify-content: flex-end; margin-top: 18px; }
+    @media (max-width: 860px) { .sidebar { position: fixed; left: 0; bottom: 0; top: 0; transform: translateX(-100%); transition: .2s ease; z-index: 20; } .sidebar.open { transform: translateX(0); } .mobile-menu { display: inline-block; } main { margin-left: 0; } .stats { grid-template-columns: repeat(2,minmax(0,1fr)); } }
+    @media (max-width: 640px) { .stats, .dashboard-grid { grid-template-columns: 1fr; } .welcome-row { display: block; } .date-chip { display: inline-block; margin-top: 12px; } .panel-head { flex-direction: column; align-items: flex-start; gap: 10px; } .content { padding: 20px 16px 40px; } .topbar { padding: 0 16px; } .search-box { width: calc(100% - 20px); margin-left: 10px; margin-right: 10px; } }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar" id="sidebar">
+      <div class="brand">
+        <div class="brand-mark">IT</div>
+        <div>
+          <div class="brand-name">ITCalider</div>
+          <div class="brand-sub">Instituto Técnico del Norte</div>
+        </div>
+      </div>
+      <div class="nav-label">Navegación</div>
+      <nav id="nav">
+        <button class="nav-btn active" type="button" data-page="inicio"><span class="nav-icon">⌂</span>Inicio</button>
+        <button class="nav-btn" type="button" data-page="horario"><span class="nav-icon">◫</span>Mi horario</button>
+        <button class="nav-btn" type="button" data-page="calificaciones"><span class="nav-icon">▤</span>Calificaciones</button>
+        <button class="nav-btn" type="button" data-page="avisos"><span class="nav-icon">♧</span>Avisos</button>
+        <button class="nav-btn" type="button" data-page="comunidad"><span class="nav-icon">☰</span>Comunidad</button>
+      </nav>
+      <div class="sidebar-spacer"></div>
+      <div class="help-card"><strong>Resumen</strong><p>Tu espacio académico centralizado para revisar clases, notas, avisos y comunidad.</p></div>
+      <div class="profile-mini">
+        <div class="avatar" id="sidebarAvatar">CM</div>
+        <div><strong id="sidebarName">Cargando…</strong><small id="sidebarRole">Estudiante</small></div>
+      </div>
+      <button class="logout-btn" id="logoutBtn" type="button">Cerrar sesión</button>
+    </aside>
+    <main>
+      <header class="topbar">
+        <div class="crumb"><button class="mobile-menu" id="menuBtn" aria-label="Abrir menú">☰</button>ITCalider <span aria-hidden="true"> / </span> <strong id="breadcrumb">Inicio</strong></div>
+        <div class="top-actions">
+          <button class="icon-btn" id="notifyBtn" aria-label="Avisos"><span>♧</span><span class="notification-dot" id="notifDot"></span></button>
+          <div class="avatar" id="topAvatar">CM</div>
+        </div>
+      </header>
+      <section class="content" id="content" aria-live="polite"></section>
+    </main>
+  </div>
+  <div class="toast" id="toast" role="status"></div>
+  <div id="modalRoot"></div>
+
+  <script>
+    const STORAGE_KEY_SESSION = 'itcalider_session_v1';
+    const STORAGE_KEY_APP = 'itcalider_app_data_v1';
+
+    function readStorage(key, fallback) {
+      try {
+        const raw = localStorage.getItem(key);
+        return raw ? JSON.parse(raw) : fallback;
+      } catch (error) {
+        return fallback;
+      }
+    }
+
+    function writeStorage(key, value) {
+      localStorage.setItem(key, JSON.stringify(value));
+    }
+
+    function defaultAppData() {
+      return {
+        classes: [
+          { time: '08:30 — 10:00', name: 'Matemática Aplicada', teacher: 'Prof. Sebastián Rojas', room: 'Sala 204' },
+          { time: '10:15 — 11:45', name: 'Fundamentos de Programación', teacher: 'Prof. Daniela Soto', room: 'Lab. 3' },
+          { time: '12:00 — 13:30', name: 'Comunicación Efectiva', teacher: 'Prof. Andrés Molina', room: 'Sala 108' },
+          { time: '14:15 — 15:45', name: 'Sistemas y Redes', teacher: 'Prof. Paula Reyes', room: 'Lab. 1' }
+        ],
+        grades: [
+          { subject: 'Matemática Aplicada', item: 'Control 1 · Funciones', date: '08 oct 2026', grade: '6,2', status: 'Publicada' },
+          { subject: 'Fundamentos de Programación', item: 'Proyecto · Etapa 1', date: '06 oct 2026', grade: '5,8', status: 'Publicada' },
+          { subject: 'Comunicación Efectiva', item: 'Presentación oral', date: '02 oct 2026', grade: '6,5', status: 'Publicada' },
+          { subject: 'Sistemas y Redes', item: 'Evaluación práctica', date: 'Por publicar', grade: '—', status: 'Pendiente' }
+        ],
+        notices: [
+          { tag: 'Cambio de sala', date: 'Hoy · 08:05', title: 'Matemática Aplicada — sala 204', body: 'La clase de hoy se realizará en la sala 204. El horario se mantiene sin cambios.', author: 'Equipo docente' },
+          { tag: 'Información', date: 'Ayer · 16:30', title: 'Semana de actividades técnicas', body: 'Ya está disponible el calendario de actividades y charlas de la próxima semana.', author: 'Equipo docente' },
+          { tag: 'Evaluación', date: '10 oct · 12:15', title: 'Prueba de Sistemas y Redes', body: 'La evaluación práctica está programada para el jueves 15 de octubre. Revisen los contenidos con su docente.', author: 'Equipo docente' }
+        ],
+        teacherNotices: [],
+        forumPosts: [
+          { title: 'Dudas sobre el proyecto de programación', author: 'Daniela Soto · Docente', replies: 8, text: 'Dejen aquí sus preguntas sobre la entrega de la primera etapa. Responderé durante la jornada.' },
+          { title: 'Material de repaso: funciones', author: 'Sebastián Rojas · Docente', replies: 5, text: 'Espacio para compartir preguntas y recursos de preparación para el próximo control.' }
+        ],
+        reviews: []
+      };
+    }
+
+    function ensureAppData() {
+      const current = readStorage(STORAGE_KEY_APP, null);
+      if (!current) {
+        const seed = defaultAppData();
+        writeStorage(STORAGE_KEY_APP, seed);
+        return seed;
+      }
+      return current;
+    }
+
+    let session = readStorage(STORAGE_KEY_SESSION, null);
+    let initialData = ensureAppData();
+
+    function buildInitialState(user = session) {
+      return {
+        page: 'inicio',
+        role: user?.role || 'student',
+        givenName: user?.givenName || 'Usuario',
+        surname: user?.surname || '',
+        className: user?.className || '3° B',
+        subject: user?.subject || 'Matemática',
+        noticesRead: !!user?.noticesRead,
+        app: initialData,
+        teacherNotices: initialData.teacherNotices || [],
+        forumPosts: initialData.forumPosts || [],
+        reviews: initialData.reviews || []
+      };
+    }
+
+    let state = buildInitialState();
+
+    async function refreshDashboardData() {
+      try {
+        const [classesResponse, noticesResponse, gradesResponse, postsResponse] = await Promise.all([
+          fetch('/api/classes', { credentials: 'include' }),
+          fetch('/api/notices', { credentials: 'include' }),
+          fetch('/api/grades', { credentials: 'include' }),
+          fetch('/api/posts', { credentials: 'include' })
+        ]);
+
+        if (!classesResponse.ok || !noticesResponse.ok || !gradesResponse.ok || !postsResponse.ok) {
+          throw new Error('No se pudieron cargar los datos del backend');
+        }
+
+        const classesData = await classesResponse.json();
+        const noticesData = await noticesResponse.json();
+        const gradesData = await gradesResponse.json();
+        const postsData = await postsResponse.json();
+
+        state.app.classes = classesData.classes || [];
+        state.app.notices = noticesData.notices || [];
+        state.app.grades = gradesData.grades || [];
+        state.forumPosts = postsData.posts || [];
+
+        const savedUser = readStorage(STORAGE_KEY_SESSION, null);
+        if (savedUser) {
+          state.givenName = savedUser.givenName || state.givenName;
+          state.surname = savedUser.surname || state.surname;
+          state.role = savedUser.role || state.role;
+          state.className = savedUser.className || state.className;
+          state.subject = savedUser.subject || state.subject;
+          state.noticesRead = !!savedUser.noticesRead;
+        }
+
+        persistApp();
+        syncShell();
+        render();
+      } catch (error) {
+        console.error('Error loading backend data:', error);
+        window.location.href = 'login.html';
+      }
+    }
+
+    async function bootstrapSession() {
+      try {
+        const response = await fetch('/api/me', { credentials: 'include' });
+        if (!response.ok) {
+          throw new Error('No authenticated');
+        }
+        const result = await response.json();
+        session = result.user;
+        writeStorage(STORAGE_KEY_SESSION, session);
+        state = buildInitialState(session);
+        await refreshDashboardData();
+      } catch (error) {
+        localStorage.removeItem(STORAGE_KEY_SESSION);
+        window.location.href = 'login.html';
+      }
+    }
+
+    const contentEl = document.getElementById('content');
+    const escapeHtml = value => String(value).replace(/[&<>"']/g, char => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[char]));
+    const fullName = () => `${state.givenName} ${state.surname}`.trim();
+    const initials = () => `${String(state.givenName || '').charAt(0)}${String(state.surname || '').charAt(0)}`.toUpperCase();
+
+    function persistSession() {
+      if (!session) return;
+      const saved = {
+        ...session,
+        role: state.role,
+        givenName: state.givenName,
+        surname: state.surname,
+        className: state.className,
+        subject: state.subject,
+        noticesRead: state.noticesRead,
+        loggedAt: session.loggedAt || new Date().toISOString()
+      };
+      session = saved;
+      writeStorage(STORAGE_KEY_SESSION, saved);
+    }
+
+    function persistApp() {
+      writeStorage(STORAGE_KEY_APP, {
+        ...state.app,
+        teacherNotices: state.teacherNotices,
+        forumPosts: state.forumPosts,
+        reviews: state.reviews,
+        notices: state.app.notices,
+        classes: state.app.classes,
+        grades: state.app.grades
+      });
+    }
+
+    function toast(message) {
+      const el = document.getElementById('toast');
+      el.textContent = message;
+      el.classList.add('show');
+      clearTimeout(toast._timer);
+      toast._timer = setTimeout(() => el.classList.remove('show'), 2500);
+    }
+
+    function syncShell() {
+      document.getElementById('breadcrumb').textContent = {
+        inicio: 'Inicio',
+        horario: 'Mi horario',
+        calificaciones: 'Calificaciones',
+        avisos: 'Avisos',
+        comunidad: 'Comunidad'
+      }[state.page];
+
+      const roleText = state.role === 'teacher' ? `Docente · ${state.subject}` : `Estudiante · ${state.className}`;
+      document.getElementById('sidebarName').textContent = fullName();
+      document.getElementById('sidebarRole').textContent = roleText;
+      document.getElementById('sidebarAvatar').textContent = initials();
+      document.getElementById('topAvatar').textContent = initials();
+      document.getElementById('notifDot').style.display = state.noticesRead ? 'none' : 'block';
+      document.querySelectorAll('.nav-btn').forEach(btn => btn.classList.toggle('active', btn.dataset.page === state.page));
+      document.getElementById('sidebar').classList.remove('open');
+    }
+
+    function classMarkup(items = state.app.classes) {
+      if (!items.length) return '<div class="empty">No hay clases para mostrar.</div>';
+      return items.map(item => `
+        <div class="class-row">
+          <div class="class-time">${escapeHtml(item.time)}</div>
+          <div class="class-stripe"></div>
+          <div class="class-info"><strong>${escapeHtml(item.name)}</strong><span>${escapeHtml(item.teacher)}</span></div>
+          <span class="room-tag">${escapeHtml(item.room)}</span>
+        </div>
+      `).join('');
+    }
+
+    function noticeMarkup(item) {
+      return `
+        <article class="notice-item">
+          <div class="notice-bullet">↗</div>
+          <div>
+            <strong>${escapeHtml(item.title)}</strong>
+            <p>${escapeHtml(item.body)} · ${escapeHtml(item.date)}</p>
+          </div>
+        </article>
+      `;
+    }
+
+    function gradeRows(items = state.app.grades) {
+      if (!items.length) return '<tr><td colspan="6" class="empty">No hay calificaciones para mostrar.</td></tr>';
+      return items.map((item, index) => `
+        <tr>
+          <td>${escapeHtml(item.subject)}</td>
+          <td>${escapeHtml(item.item)}</td>
+          <td>${escapeHtml(item.date)}</td>
+          <td>${escapeHtml(item.grade)}</td>
+          <td><span class="badge ${item.status === 'Pendiente' ? 'pending' : ''}">${escapeHtml(item.status)}</span></td>
+          <td>${state.role === 'teacher' ? `<button class="small-btn" type="button" data-action="edit-grade" data-index="${index}">Registrar nota</button>` : `<button class="small-btn" type="button" data-action="request-review" data-index="${index}">Consultar</button>`}</td>
+        </tr>
+      `).join('');
+    }
+
+    function renderHome() {
+      const teacher = state.role === 'teacher';
+      const banner = state.noticesRead ? '' : `
+        <div class="notice-banner">
+          <div class="notice-symbol">♧</div>
+          <div class="notice-copy"><strong>Tienes avisos nuevos</strong><span>Revisa la información reciente de tus asignaturas.</span></div>
+          <button type="button" class="text-button" data-action="go-notices">Ver avisos →</button>
+        </div>
+      `;
+
+      if (teacher) {
+        contentEl.innerHTML = `
+          <div class="welcome-row"><div><div class="eyebrow">Panel docente</div><h1>Hola, ${escapeHtml(state.givenName)} 👋</h1><p>Aquí tienes un resumen de tus asignaturas y actividad reciente.</p></div><div class="date-chip">◷ &nbsp; Lunes, 12 de octubre</div></div>
+          ${banner}
+          <div class="stats">
+            <div class="stat-card"><div class="stat-top"><span>Asignaturas</span><span class="stat-icon">▦</span></div><div class="stat-value">4</div><div class="stat-foot">a tu cargo este semestre</div></div>
+            <div class="stat-card"><div class="stat-top"><span>Estudiantes</span><span class="stat-icon">♙</span></div><div class="stat-value">86</div><div class="stat-foot">en tus secciones</div></div>
+            <div class="stat-card"><div class="stat-top"><span>Notas pendientes</span><span class="stat-icon">▤</span></div><div class="stat-value">12</div><div class="stat-foot">por registrar o publicar</div></div>
+            <div class="stat-card"><div class="stat-top"><span>Avisos publicados</span><span class="stat-icon">♧</span></div><div class="stat-value">${state.teacherNotices.length + state.app.notices.length}</div><div class="stat-foot">durante este mes</div></div>
+          </div>
+          <div class="dashboard-grid">
+            <div>
+              <section class="panel"><div class="panel-head"><div><div class="panel-title">Tus clases de hoy</div><div class="panel-subtitle">Lunes, 12 de octubre</div></div><button type="button" class="link-button" data-page="horario">Ver horario →</button></div><div class="schedule-list">${classMarkup()}</div></section>
+              <section class="panel"><div class="panel-head"><div><div class="panel-title">Acciones rápidas</div><div class="panel-subtitle">Gestiona tu comunicación académica</div></div></div><div class="activity-list"><button type="button" class="primary-btn" data-action="new-notice">＋ Publicar aviso</button> <button type="button" class="small-btn" data-action="new-grade">Registrar calificación</button></div></section>
+            </div>
+            <div>
+              <section class="panel"><div class="panel-head"><div><div class="panel-title">Avisos recientes</div><div class="panel-subtitle">Información para tus cursos</div></div><button type="button" class="link-button" data-page="avisos">Ver todos</button></div><div class="notice-feed">${[...state.app.notices, ...state.teacherNotices].slice(0,2).map(noticeMarkup).join('')}</div></section>
+            </div>
+          </div>
+        `;
+        return;
+      }
+
+      contentEl.innerHTML = `
+        <div class="welcome-row"><div><div class="eyebrow">Tu espacio académico</div><h1>Hola, ${escapeHtml(state.givenName)} 👋</h1><p>Aquí tienes un resumen de tu actividad académica.</p></div><div class="date-chip">◷ &nbsp; Lunes, 12 de octubre</div></div>
+        ${banner}
+        <div class="stats">
+          <div class="stat-card"><div class="stat-top"><span>Asignaturas</span><span class="stat-icon">▦</span></div><div class="stat-value">6</div><div class="stat-foot">en el semestre actual</div></div>
+          <div class="stat-card"><div class="stat-top"><span>Promedio</span><span class="stat-icon">↗</span></div><div class="stat-value">6,2</div><div class="stat-foot">según notas publicadas</div></div>
+          <div class="stat-card"><div class="stat-top"><span>Próxima evaluación</span><span class="stat-icon">◇</span></div><div class="stat-value">15</div><div class="stat-foot">Sistemas y Redes</div></div>
+          <div class="stat-card"><div class="stat-top"><span>Avisos nuevos</span><span class="stat-icon">♧</span></div><div class="stat-value">${state.noticesRead ? 0 : 3}</div><div class="stat-foot">de tus asignaturas</div></div>
+        </div>
+        <div class="dashboard-grid">
+          <div>
+            <section class="panel"><div class="panel-head"><div><div class="panel-title">Mi jornada de hoy</div><div class="panel-subtitle">Lunes, 12 de octubre · 4 clases</div></div><button type="button" class="link-button" data-page="horario">Ver horario →</button></div><div class="schedule-list">${classMarkup()}</div></section>
+            <section class="panel"><div class="panel-head"><div><div class="panel-title">Próximas actividades</div><div class="panel-subtitle">No pierdas de vista tus fechas</div></div><button type="button" class="link-button" data-page="calificaciones">Ver notas</button></div><div class="activity-list"><div class="activity-row"><div class="activity-date"><span>OCT</span><strong>15</strong></div><div class="activity-copy"><strong>Evaluación práctica</strong><span>Sistemas y Redes · 10:15</span></div><span class="badge">Prueba</span></div><div class="activity-row"><div class="activity-date"><span>OCT</span><strong>19</strong></div><div class="activity-copy"><strong>Entrega etapa 2</strong><span>Fundamentos de Programación</span></div><span class="badge">Entrega</span></div></div></section>
+          </div>
+          <div>
+            <section class="panel"><div class="panel-head"><div><div class="panel-title">Avisos recientes</div><div class="panel-subtitle">De tus asignaturas</div></div><button type="button" class="link-button" data-page="avisos">Ver todos</button></div><div class="notice-feed">${state.app.notices.slice(0,3).map(noticeMarkup).join('')}</div></section>
+            <section class="panel"><div class="panel-head"><div><div class="panel-title">Últimas calificaciones</div><div class="panel-subtitle">Tu progreso académico</div></div><button type="button" class="link-button" data-page="calificaciones">Ver todas</button></div><div class="activity-list"><div class="activity-row"><div class="activity-date"><span>MAT</span><strong>6,2</strong></div><div class="activity-copy"><strong>Matemática Aplicada</strong><span>Control 1 · Funciones</span></div><span class="badge">Publicada</span></div><div class="activity-row"><div class="activity-date"><span>PRO</span><strong>5,8</strong></div><div class="activity-copy"><strong>Fundamentos de Programación</strong><span>Proyecto · Etapa 1</span></div><span class="badge">Publicada</span></div></div></section>
+          </div>
+        </div>
+      `;
+    }
+
+    function renderSchedule() {
+      const teacher = state.role === 'teacher';
+      contentEl.innerHTML = `
+        <div class="welcome-row"><div><div class="eyebrow">${teacher ? 'Planificación' : 'Organiza tu semana'}</div><h1>${teacher ? 'Horario docente' : 'Mi horario'}</h1><p>${teacher ? 'Revisa las clases y secciones de tu jornada.' : 'Consulta tus clases y salas de esta semana.'}</p></div><div class="date-chip">◷ &nbsp; Lunes, 12 de octubre</div></div>
+        <input class="search-box" id="scheduleSearch" type="search" value="" placeholder="Buscar clases, docentes o salas" aria-label="Buscar en el horario">
+        <section class="panel"><div class="panel-head"><div><div class="panel-title">Lunes</div><div class="panel-subtitle">${state.app.classes.length} clases programadas</div></div></div><div class="schedule-list" id="scheduleResults">${classMarkup()}</div></section>
+      `;
+    }
+
+    function renderGrades() {
+      const teacher = state.role === 'teacher';
+      contentEl.innerHTML = `
+        <div class="welcome-row"><div><div class="eyebrow">${teacher ? 'Panel docente' : 'Seguimiento académico'}</div><h1>${teacher ? 'Registro de calificaciones' : 'Mis calificaciones'}</h1><p>${teacher ? 'Revisa y registra las notas de tus secciones.' : 'Consulta las calificaciones publicadas por tus docentes.'}</p></div><div class="date-chip">◷ &nbsp; Semestre actual</div></div>
+        ${teacher ? '<div class="teacher-note">Vista conceptual para docentes. La publicación real de notas requiere permisos, validaciones y conexión institucional.</div>' : ''}
+        <input class="search-box" id="gradeSearch" type="search" value="" placeholder="Buscar por asignatura o evaluación" aria-label="Buscar calificaciones">
+        <section class="panel">
+          <div class="panel-head"><div><div class="panel-title">${teacher ? 'Calificaciones del curso' : 'Calificaciones recientes'}</div><div class="panel-subtitle">${teacher ? 'Sección 3° B · 24 estudiantes' : 'Semestre actual · Información de demostración'}</div></div>${teacher ? '<button type="button" class="primary-btn" data-action="new-grade">＋ Registrar nota</button>' : ''}</div>
+          <div class="table-wrap"><table><thead><tr><th>Asignatura</th><th>Evaluación</th><th>Fecha</th><th>Nota</th><th>Estado</th><th>Acción</th></tr></thead><tbody id="gradeTableBody">${gradeRows()}</tbody></table></div>
+        </section>
+      `;
+    }
+
+    function renderNotices() {
+      const items = state.role === 'teacher' ? [...state.app.notices, ...state.teacherNotices] : state.app.notices;
+      state.noticesRead = true;
+      contentEl.innerHTML = `
+        <div class="welcome-row"><div><div class="eyebrow">Comunicación</div><h1>${state.role === 'teacher' ? 'Avisos de tus cursos' : 'Avisos y novedades'}</h1><p>${state.role === 'teacher' ? 'Información que has compartido con tus estudiantes.' : 'Información importante de tus asignaturas, reunida en un solo lugar.'}</p></div><div class="date-chip">◷ &nbsp; ${items.length} avisos</div></div>
+        <section class="panel"><div class="panel-head"><div><div class="panel-title">Publicaciones recientes</div><div class="panel-subtitle">${items.length} avisos disponibles</div></div>${state.role === 'teacher' ? '<button type="button" class="primary-btn" data-action="new-notice">＋ Publicar aviso</button>' : ''}</div><div class="notice-feed">${items.map(item => `<article class="feed-card"><div class="feed-meta"><span class="feed-tag">${escapeHtml(item.tag)}</span><span>${escapeHtml(item.date)}</span><span>·</span><span>${escapeHtml(item.author || 'Equipo docente')}</span></div><h3>${escapeHtml(item.title)}</h3><p>${escapeHtml(item.body)}</p></article>`).join('')}</div></section>
+      `;
+    }
+
+    function renderCommunity() {
+      contentEl.innerHTML = `
+        <div class="welcome-row"><div><div class="eyebrow">Comunicación</div><h1>Comunidad académica</h1><p>${state.role === 'teacher' ? 'Comparte información y acompaña las conversaciones de tus cursos.' : 'Espacios de conversación para resolver dudas y compartir ideas.'}</p></div><div class="date-chip">◷ &nbsp; Foro</div></div>
+        <div class="teacher-note">Los foros son una funcionalidad considerada para el proyecto. Este espacio es una muestra interactiva; sus normas y moderación deben acordarse con la institución.</div>
+        <section class="panel"><div class="panel-head"><div><div class="panel-title">Conversaciones de tus asignaturas</div><div class="panel-subtitle">Participa respetuosamente y mantén tus consultas relacionadas con el curso.</div></div><button type="button" class="primary-btn" data-action="new-post">＋ Nueva conversación</button></div><div class="forum-list">${state.forumPosts.map(post => `<article class="forum-card"><h3>${escapeHtml(post.title)}</h3><p>${escapeHtml(post.text)}</p><div class="feed-meta" style="margin-top:8px"><span>${escapeHtml(post.author)}</span><span>·</span><span>${post.replies} respuestas</span></div></article>`).join('')}</div></section>
+      `;
+    }
+
+    function render() {
+      syncShell();
+      persistSession();
+      if (state.page === 'inicio') renderHome();
+      else if (state.page === 'horario') renderSchedule();
+      else if (state.page === 'calificaciones') renderGrades();
+      else if (state.page === 'avisos') renderNotices();
+      else renderCommunity();
+    }
+
+    function openModal(title, description, fieldsHtml, submitLabel, onSubmit) {
+      const root = document.getElementById('modalRoot');
+      root.innerHTML = `
+        <div class="modal-backdrop" data-close="true">
+          <form class="modal">
+            <h2>${escapeHtml(title)}</h2>
+            <p>${escapeHtml(description)}</p>
+            ${fieldsHtml}
+            <div class="modal-actions">
+              <button type="button" class="secondary-btn" data-close="true">Cancelar</button>
+              <button type="submit" class="primary-btn">${escapeHtml(submitLabel)}</button>
+            </div>
+          </form>
+        </div>
+      `;
+      const form = root.querySelector('form');
+      form.addEventListener('submit', async event => {
+        event.preventDefault();
+        const values = Object.fromEntries(new FormData(event.currentTarget).entries());
+        const ok = await onSubmit(values);
+        if (ok !== false) root.innerHTML = '';
+      });
+      root.addEventListener('click', event => {
+        if (event.target.dataset.close === 'true') root.innerHTML = '';
+      });
+      const firstField = root.querySelector('input, textarea, select');
+      if (firstField) firstField.focus();
+    }
+
+    function requestReview(index) {
+      const item = state.app.grades[index];
+      if (!item) return;
+      openModal('Consultar una calificación', `Deja una observación sobre “${item.item}” en ${item.subject}. Esta solicitud se guarda localmente en este navegador.`, '<label for="reviewText">Tu observación</label><textarea id="reviewText" name="text" required placeholder="Describe brevemente qué te gustaría que revisaran…"></textarea>', 'Enviar observación', values => {
+        state.reviews.unshift({ subject: item.subject, text: values.text.trim(), date: '12 oct 2026' });
+        persistApp();
+        state.page = 'calificaciones';
+        render();
+        toast('Observación guardada localmente.');
+        return true;
+      });
+    }
+
+    function createNotice() {
+      openModal('Publicar un aviso', 'El aviso se guardará en la base de datos local del backend.', '<label for="noticeTitle">Título</label><input id="noticeTitle" name="title" required maxlength="90" placeholder="Ej. Cambio de sala para la clase"><label for="noticeType">Tipo de aviso</label><select id="noticeType" name="tag"><option>Aviso general</option><option>Cambio de sala</option><option>Evaluación</option><option>Actividad</option></select><label for="noticeBody">Mensaje</label><textarea id="noticeBody" name="body" required maxlength="500" placeholder="Escribe la información para tus estudiantes…"></textarea>', 'Publicar aviso', async values => {
+        try {
+          const response = await fetch('/api/notices', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              title: values.title.trim(),
+              body: values.body.trim(),
+              author: fullName()
+            })
+          });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.message || 'No se pudo guardar el aviso');
+
+          state.teacherNotices.unshift({
+            title: values.title.trim(),
+            tag: values.tag,
+            body: values.body.trim(),
+            date: 'Ahora',
+            author: fullName()
+          });
+          persistApp();
+          state.page = 'avisos';
+          render();
+          toast('Aviso publicado correctamente.');
+          return true;
+        } catch (error) {
+          toast(error.message || 'No se pudo guardar el aviso.');
+          return false;
+        }
+      });
+    }
+
+    function createPost() {
+      openModal('Nueva conversación', 'Comparte una pregunta o tema relacionado con tus asignaturas.', '<label for="postTitle">Tema</label><input id="postTitle" name="title" required maxlength="90" placeholder="¿Sobre qué quieres conversar?"><label for="postBody">Mensaje</label><textarea id="postBody" name="text" required maxlength="500" placeholder="Escribe tu mensaje…"></textarea>', 'Publicar', async values => {
+        try {
+          const response = await fetch('/api/posts', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              title: values.title.trim(),
+              text: values.text.trim()
+            })
+          });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.message || 'No se pudo publicar el mensaje');
+
+          state.forumPosts.unshift({
+            title: values.title.trim(),
+            text: values.text.trim(),
+            author: `${fullName()} · ${state.role === 'teacher' ? 'Docente' : 'Estudiante'}`,
+            replies: 0
+          });
+          persistApp();
+          render();
+          toast('Conversación publicada correctamente.');
+          return true;
+        } catch (error) {
+          toast(error.message || 'No se pudo crear la conversación.');
+          return false;
+        }
+      });
+    }
+
+    function editGrade(index = null) {
+      const selected = index === null ? { subject: state.subject || 'Matemática Aplicada', item: 'Control 2 · Álgebra', date: 'Hoy', grade: '6,0' } : state.app.grades[index];
+      openModal(index === null ? 'Registrar calificación' : 'Actualizar calificación', 'Esta acción guarda la nota en la base de datos local del backend.', `<label for="gradeSubject">Asignatura</label><input id="gradeSubject" name="subject" required value="${escapeHtml(selected.subject)}"><label for="gradeItem">Evaluación</label><input id="gradeItem" name="item" required value="${escapeHtml(selected.item)}"><label for="gradeDate">Fecha</label><input id="gradeDate" name="date" required value="${escapeHtml(selected.date)}"><label for="gradeValue">Calificación (1,0 a 7,0)</label><input id="gradeValue" name="grade" required type="number" min="1" max="7" step="0.1" value="${Number(String(selected.grade).replace(',', '.')) || 6}">`, 'Guardar nota', async values => {
+        try {
+          const normalized = Number(String(values.grade).replace(',', '.'));
+          const item = {
+            subject: values.subject.trim() || selected.subject,
+            item: values.item.trim() || selected.item,
+            date: values.date.trim() || selected.date,
+            grade: Number.isFinite(normalized) ? normalized.toFixed(1).replace('.', ',') : selected.grade,
+            status: 'Publicada'
+          };
+
+          const response = await fetch('/api/grades', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            credentials: 'include',
+            body: JSON.stringify({
+              subject: item.subject,
+              item: item.item,
+              date: item.date,
+              grade: item.grade,
+              status: item.status
+            })
+          });
+          const result = await response.json();
+          if (!response.ok) throw new Error(result.message || 'No se pudo guardar la nota');
+
+          if (index === null) state.app.grades.unshift(item); else state.app.grades[index] = item;
+          persistApp();
+          state.page = 'calificaciones';
+          render();
+          toast('Nota registrada correctamente.');
+          return true;
+        } catch (error) {
+          toast(error.message || 'No se pudo registrar la nota.');
+          return false;
+        }
+      });
+    }
+
+    document.getElementById('nav').addEventListener('click', event => {
+      const button = event.target.closest('[data-page]');
+      if (!button) return;
+      state.page = button.dataset.page;
+      if (state.page === 'avisos') state.noticesRead = true;
+      render();
+    });
+
+    document.getElementById('content').addEventListener('click', event => {
+      const pageButton = event.target.closest('[data-page]');
+      if (pageButton) {
+        state.page = pageButton.dataset.page;
+        if (state.page === 'avisos') state.noticesRead = true;
+        render();
+        return;
+      }
+      const action = event.target.closest('[data-action]');
+      if (!action) return;
+      const actionName = action.dataset.action;
+      if (actionName === 'go-notices') { state.page = 'avisos'; state.noticesRead = true; render(); }
+      if (actionName === 'request-review') requestReview(Number(action.dataset.index));
+      if (actionName === 'new-notice') createNotice();
+      if (actionName === 'new-post') createPost();
+      if (actionName === 'new-grade') editGrade();
+      if (actionName === 'edit-grade') editGrade(Number(action.dataset.index));
+    });
+
+    document.getElementById('content').addEventListener('input', event => {
+      const search = event.target;
+      if (search.id === 'scheduleSearch') {
+        const query = search.value.trim().toLowerCase();
+        const filtered = state.app.classes.filter(item => `${item.name} ${item.teacher} ${item.room}`.toLowerCase().includes(query));
+        document.getElementById('scheduleResults').innerHTML = classMarkup(filtered);
+      }
+      if (search.id === 'gradeSearch') {
+        const query = search.value.trim().toLowerCase();
+        const filtered = state.app.grades.filter(item => `${item.subject} ${item.item} ${item.status}`.toLowerCase().includes(query));
+        document.getElementById('gradeTableBody').innerHTML = gradeRows(filtered);
+      }
+    });
+
+    document.getElementById('notifyBtn').addEventListener('click', () => {
+      state.noticesRead = true;
+      render();
+      toast('Avisos marcados como leídos.');
+    });
+
+    document.getElementById('menuBtn').addEventListener('click', () => {
+      document.getElementById('sidebar').classList.toggle('open');
+    });
+
+    document.getElementById('logoutBtn').addEventListener('click', async () => {
+      try {
+        await fetch('/api/logout', {
+          method: 'POST',
+          credentials: 'include'
+        });
+      } catch (error) {
+        console.warn('Logout call failed:', error);
+      }
+      localStorage.removeItem(STORAGE_KEY_SESSION);
+      window.location.href = 'login.html';
+    });
+
+    bootstrapSession();
+  </script>
+</body>
+</html>
