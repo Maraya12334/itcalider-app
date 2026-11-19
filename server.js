@@ -8,15 +8,60 @@ const path = require('path');
 const PORT = process.env.PORT || 3000;
 const JWT_SECRET = process.env.JWT_SECRET || 'itcalider-dev-secret';
 const DB_PATH = path.join(__dirname, 'database.sqlite');
+const ACADEMIC_MONTHS = new Set([3, 4, 5, 6, 8, 9, 10, 11, 12]);
+const ACADEMIC_TIME_ZONE = 'America/Santiago';
 
 const app = express();
+
+function chileDateParts(date = new Date()) {
+  const parts = new Intl.DateTimeFormat('en-CA', {
+    timeZone: ACADEMIC_TIME_ZONE,
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit'
+  }).formatToParts(date);
+  return Object.fromEntries(parts.filter(part => part.type !== 'literal').map(part => [part.type, part.value]));
+}
+
+function chileDateISO(date = new Date()) {
+  const parts = chileDateParts(date);
+  return `${parts.year}-${parts.month}-${parts.day}`;
+}
+
+function isAcademicDate(value) {
+  if (!isValidDate(value)) return false;
+  const [year, month, day] = value.split('-').map(Number);
+  const weekday = new Date(Date.UTC(year, month - 1, day)).getUTCDay();
+  return ACADEMIC_MONTHS.has(month) && weekday !== 0 && weekday !== 6;
+}
+
+function formatNoticeDate(value) {
+  const date = new Date(`${String(value).replace(' ', 'T')}Z`);
+  if (Number.isNaN(date.getTime())) return value;
+  return new Intl.DateTimeFormat('es-CL', {
+    timeZone: ACADEMIC_TIME_ZONE,
+    day: '2-digit',
+    month: 'short',
+    year: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+    hourCycle: 'h23'
+  }).format(date);
+}
 
 app.use(express.json());
 app.use(cookieParser());
 app.get('/', (_req, res) => {
   res.sendFile(path.join(__dirname, 'login.html'));
 });
-app.use(express.static(__dirname));
+
+app.get('/login.html', (_req, res) => {
+  res.sendFile(path.join(__dirname, 'login.html'));
+});
+
+app.get('/index.html', (_req, res) => {
+  res.sendFile(path.join(__dirname, 'index.html'));
+});
 
 const db = new sqlite3.Database(DB_PATH, (error) => {
   if (error) {
@@ -69,6 +114,21 @@ function initDatabase() {
     `);
 
     db.run(`
+      CREATE TABLE IF NOT EXISTS attendance (
+        id INTEGER PRIMARY KEY AUTOINCREMENT,
+        teacherId INTEGER NOT NULL,
+        studentId INTEGER NOT NULL,
+        subject TEXT NOT NULL,
+        attendanceDate TEXT NOT NULL,
+        status TEXT NOT NULL,
+        updatedAt TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE (teacherId, studentId, subject, attendanceDate),
+        FOREIGN KEY(teacherId) REFERENCES users(id),
+        FOREIGN KEY(studentId) REFERENCES users(id)
+      )
+    `);
+
+    db.run(`
       CREATE TABLE IF NOT EXISTS posts (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
         userId INTEGER NOT NULL,
@@ -95,19 +155,19 @@ function initDatabase() {
         title: 'Matemática Aplicada — sala 204',
         body: 'La clase de hoy se realizará en la sala 204. El horario se mantiene sin cambios.',
         author: 'Equipo docente',
-        date: 'Hoy · 08:05'
+        date: formatNoticeDate(new Date().toISOString().slice(0, 19).replace('T', ' '))
       },
       {
         title: 'Semana de actividades técnicas',
         body: 'Ya está disponible el calendario de actividades y charlas de la próxima semana.',
         author: 'Equipo docente',
-        date: 'Ayer · 16:30'
+        date: formatNoticeDate(new Date().toISOString().slice(0, 19).replace('T', ' '))
       },
       {
         title: 'Prueba de Sistemas y Redes',
-        body: 'La evaluación práctica está programada para el jueves 15 de octubre. Revisen los contenidos con su docente.',
+        body: 'Consulta con tu docente la fecha y los contenidos de la próxima evaluación práctica.',
         author: 'Equipo docente',
-        date: '10 oct · 12:15'
+        date: formatNoticeDate(new Date().toISOString().slice(0, 19).replace('T', ' '))
       }
     ];
 
@@ -122,6 +182,13 @@ function initDatabase() {
         insertNotice.finalize();
       }
     });
+    db.run(
+      "UPDATE notices SET body = ? WHERE title = ? AND body LIKE '%15 de octubre%'",
+      ['Consulta con tu docente la fecha y los contenidos de la próxima evaluación práctica.', 'Prueba de Sistemas y Redes'],
+      (error) => {
+        if (error) console.error('Error updating demo notice:', error.message);
+      }
+    );
 
     const seedGrades = [
       { subject: 'Matemática Aplicada', item: 'Control 1 · Funciones', date: '08 oct 2026', grade: '6,2', status: 'Publicada' },
@@ -150,17 +217,39 @@ function initDatabase() {
         console.error('Error checking users:', error.message);
         return;
       }
-      if (row.count === 0) {
-        const defaultPassword = 'itcalider123';
-        bcrypt.hash(defaultPassword, 10).then((hash) => {
-          db.run(
-            'INSERT INTO users (givenName, surname, email, passwordHash, role, className, subject) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            'Camila', 'Mendoza', 'camila@instituto.cl', hash, 'student', '3° B', 'Matemática'
-          );
-          db.run(
-            'INSERT INTO users (givenName, surname, email, passwordHash, role, className, subject) VALUES (?, ?, ?, ?, ?, ?, ?)',
-            'Mateo', 'Pérez', 'mateo@instituto.cl', hash, 'teacher', '3° B', 'Matemática'
-          );
+
+      const demoUsers = [
+        { givenName: 'Camila', surname: 'Mendoza', email: 'camila@instituto.cl', password: 'itcalider123', role: 'student', className: '3° B', subject: 'Matemática' },
+        { givenName: 'Mateo', surname: 'Pérez', email: 'mateo@instituto.cl', password: 'itcalider123', role: 'teacher', className: '3° B', subject: 'Matemática' },
+        { givenName: 'Valentina Ignacia', surname: 'Pérez Soto', email: 'valentina.perez@instituto.cl', password: 'Itcalider2026!', role: 'student', className: '3° B', subject: 'Matemática' },
+        { givenName: 'Sebastián Andrés', surname: 'González Díaz', email: 'sebastian.gonzalez@instituto.cl', password: 'Itcalider2026!', role: 'student', className: '3° B', subject: 'Matemática' },
+        { givenName: 'Fernanda Belén', surname: 'Muñoz Castro', email: 'fernanda.munoz@instituto.cl', password: 'Itcalider2026!', role: 'student', className: '3° A', subject: 'Matemática' },
+        { givenName: 'Diego Alejandro', surname: 'Contreras Rojas', email: 'diego.contreras@instituto.cl', password: 'Itcalider2026!', role: 'student', className: '4° A', subject: 'Matemática' },
+        { givenName: 'Javiera Antonia', surname: 'Morales Silva', email: 'javiera.morales@instituto.cl', password: 'Itcalider2026!', role: 'student', className: '4° B', subject: 'Matemática' },
+        { givenName: 'Carolina Andrea', surname: 'Silva Torres', email: 'carolina.silva@instituto.cl', password: 'Itcalider2026!', role: 'teacher', className: '3° B', subject: 'Matemática Aplicada' },
+        { givenName: 'Andrés Felipe', surname: 'Fernández Soto', email: 'andres.fernandez@instituto.cl', password: 'Itcalider2026!', role: 'teacher', className: '3° B', subject: 'Fundamentos de Programación' },
+        { givenName: 'Daniela Paz', surname: 'Castillo Morales', email: 'daniela.castillo@instituto.cl', password: 'Itcalider2026!', role: 'teacher', className: '3° B', subject: 'Comunicación Efectiva' },
+        { givenName: 'Felipe Ignacio', surname: 'Ramírez Pérez', email: 'felipe.ramirez@instituto.cl', password: 'Itcalider2026!', role: 'teacher', className: '3° B', subject: 'Sistemas y Redes' },
+        { givenName: 'Patricia Elena', surname: 'Soto González', email: 'patricia.soto@instituto.cl', password: 'Itcalider2026!', role: 'teacher', className: '3° B', subject: 'Gestión de Proyectos' }
+      ];
+
+      if (row.count === 0 || row.count < demoUsers.length) {
+        Promise.all(demoUsers.map(async (user) => {
+          const hash = await bcrypt.hash(user.password, 10);
+          return new Promise((resolve) => {
+            db.run(
+              'INSERT OR IGNORE INTO users (givenName, surname, email, passwordHash, role, className, subject) VALUES (?, ?, ?, ?, ?, ?, ?)',
+              [user.givenName, user.surname, user.email, hash, user.role, user.className, user.subject],
+              function (insertError) {
+                if (insertError) {
+                  console.error('Error seeding demo user:', user.email, insertError.message);
+                }
+                resolve();
+              }
+            );
+          });
+        })).catch((seedError) => {
+          console.error('Error seeding demo users:', seedError.message);
         });
       }
     });
@@ -184,6 +273,22 @@ function authenticate(req, res, next) {
   } catch (error) {
     return res.status(401).json({ ok: false, message: 'Token inválido' });
   }
+}
+
+function findTeacherCourse(teacherId, callback) {
+  db.get('SELECT className, subject FROM users WHERE id = ? AND role = ?', [teacherId, 'teacher'], (error, course) => {
+    callback(error, course);
+  });
+}
+
+function isValidDate(value) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(value)) return false;
+  const date = new Date(`${value}T00:00:00.000Z`);
+  return !Number.isNaN(date.getTime()) && date.toISOString().slice(0, 10) === value;
+}
+
+function currentChileDate() {
+  return chileDateISO();
 }
 
 app.get('/api/health', (_req, res) => {
@@ -287,7 +392,7 @@ app.get('/api/notices', authenticate, (_req, res) => {
     if (error) {
       return res.status(500).json({ ok: false, message: 'No se pudieron cargar los avisos' });
     }
-    res.json({ ok: true, notices: rows });
+    res.json({ ok: true, notices: rows.map(row => ({ ...row, date: formatNoticeDate(row.createdAt) })) });
   });
 });
 
@@ -308,11 +413,180 @@ app.get('/api/classes', authenticate, (req, res) => {
     { time: '14:15 — 15:45', name: 'Sistemas y Redes', teacher: 'Prof. Paula Reyes', room: 'Lab. 1' }
   ];
 
-  if (req.user.role === 'teacher') {
-    return res.json({ ok: true, classes: defaultClasses });
+  res.json({ ok: true, classes: isAcademicDate(currentChileDate()) ? defaultClasses : [] });
+});
+
+app.get('/api/teacher/roster', authenticate, (req, res) => {
+  if (req.user.role !== 'teacher') {
+    return res.status(403).json({ ok: false, message: 'Solo docentes pueden consultar este curso' });
   }
 
-  res.json({ ok: true, classes: defaultClasses });
+  const attendanceDate = req.query.date || new Date().toISOString().slice(0, 10);
+  if (!isValidDate(attendanceDate)) {
+    return res.status(400).json({ ok: false, message: 'La fecha debe tener el formato AAAA-MM-DD' });
+  }
+
+  findTeacherCourse(req.user.id, (courseError, course) => {
+    if (courseError) {
+      return res.status(500).json({ ok: false, message: 'No se pudo consultar la asignatura' });
+    }
+    if (!course) {
+      return res.status(404).json({ ok: false, message: 'No se encontró la asignatura del docente' });
+    }
+
+    db.all(`
+      SELECT u.id, u.givenName, u.surname, a.status AS attendanceStatus
+      FROM users u
+      LEFT JOIN attendance a
+        ON a.studentId = u.id
+        AND a.teacherId = ?
+        AND a.subject = ?
+        AND a.attendanceDate = ?
+      WHERE u.role = 'student' AND u.className = ?
+      ORDER BY u.surname, u.givenName
+    `, [req.user.id, course.subject, attendanceDate, course.className], (error, students) => {
+      if (error) {
+        return res.status(500).json({ ok: false, message: 'No se pudo cargar la lista de alumnos' });
+      }
+      res.json({
+        ok: true,
+        course,
+        date: attendanceDate,
+        students
+      });
+    });
+  });
+});
+
+app.post('/api/teacher/attendance', authenticate, (req, res) => {
+  if (req.user.role !== 'teacher') {
+    return res.status(403).json({ ok: false, message: 'Solo docentes pueden registrar asistencia' });
+  }
+
+  const { date, records } = req.body || {};
+  const allowedStatuses = new Set(['present', 'absent', 'late', 'justified']);
+  if (!isValidDate(date) || !Array.isArray(records) || records.length === 0 || records.length > 100) {
+    return res.status(400).json({ ok: false, message: 'Indica una fecha válida y la asistencia de 1 a 100 alumnos' });
+  }
+  if (records.some(record => !record || typeof record !== 'object' || Array.isArray(record))) {
+    return res.status(400).json({ ok: false, message: 'La lista de asistencia contiene un registro inválido' });
+  }
+
+  const studentIds = records.map(record => Number(record.studentId));
+  if (studentIds.some(id => !Number.isSafeInteger(id) || id < 1)
+    || new Set(studentIds).size !== studentIds.length
+    || records.some(record => !allowedStatuses.has(record.status))) {
+    return res.status(400).json({ ok: false, message: 'La lista contiene alumnos o estados de asistencia inválidos' });
+  }
+
+  findTeacherCourse(req.user.id, (courseError, course) => {
+    if (courseError) {
+      return res.status(500).json({ ok: false, message: 'No se pudo consultar la asignatura' });
+    }
+    if (!course) {
+      return res.status(404).json({ ok: false, message: 'No se encontró la asignatura del docente' });
+    }
+
+    db.all(
+      "SELECT id FROM users WHERE role = 'student' AND className = ?",
+      [course.className],
+      (studentsError, students) => {
+        if (studentsError) {
+          return res.status(500).json({ ok: false, message: 'No se pudo validar la lista de alumnos' });
+        }
+        const courseStudentIds = new Set(students.map(student => student.id));
+        if (studentIds.some(id => !courseStudentIds.has(id))) {
+          return res.status(403).json({ ok: false, message: 'La lista incluye alumnos fuera de tu curso' });
+        }
+        if (students.length !== studentIds.length) {
+          return res.status(400).json({ ok: false, message: 'Registra la asistencia de todos los alumnos del curso' });
+        }
+
+        const values = records.map(() => '(?, ?, ?, ?, ?)').join(', ');
+        const params = records.flatMap((record, index) => [
+          req.user.id,
+          studentIds[index],
+          course.subject,
+          date,
+          record.status
+        ]);
+        db.run(`
+          INSERT INTO attendance (teacherId, studentId, subject, attendanceDate, status)
+          VALUES ${values}
+          ON CONFLICT (teacherId, studentId, subject, attendanceDate)
+          DO UPDATE SET status = excluded.status, updatedAt = CURRENT_TIMESTAMP
+        `, params, function (insertError) {
+          if (insertError) {
+            return res.status(500).json({ ok: false, message: 'No se pudo guardar la asistencia' });
+          }
+          res.json({ ok: true, message: 'Asistencia guardada', count: this.changes });
+        });
+      }
+    );
+  });
+});
+
+app.post('/api/teacher/grades', authenticate, (req, res) => {
+  if (req.user.role !== 'teacher') {
+    return res.status(403).json({ ok: false, message: 'Solo docentes pueden registrar calificaciones' });
+  }
+
+  const { studentId, item, date, grade } = req.body || {};
+  const numericGrade = Number(String(grade || '').replace(',', '.'));
+  const normalizedItem = typeof item === 'string' ? item.trim() : '';
+  const normalizedDate = typeof date === 'string' ? date.trim() : '';
+  const parsedStudentId = Number(studentId);
+  if (!Number.isSafeInteger(parsedStudentId) || parsedStudentId < 1
+    || !normalizedItem || normalizedItem.length > 90
+    || !normalizedDate || normalizedDate.length > 40
+    || !Number.isFinite(numericGrade) || numericGrade < 1 || numericGrade > 7) {
+    return res.status(400).json({ ok: false, message: 'Revisa el alumno, la evaluación, la fecha y la nota (1,0 a 7,0)' });
+  }
+
+  findTeacherCourse(req.user.id, (courseError, course) => {
+    if (courseError) {
+      return res.status(500).json({ ok: false, message: 'No se pudo consultar la asignatura' });
+    }
+    if (!course) {
+      return res.status(404).json({ ok: false, message: 'No se encontró la asignatura del docente' });
+    }
+
+    db.get(
+      "SELECT id FROM users WHERE id = ? AND role = 'student' AND className = ?",
+      [parsedStudentId, course.className],
+      (studentError, student) => {
+        if (studentError) {
+          return res.status(500).json({ ok: false, message: 'No se pudo validar al alumno' });
+        }
+        if (!student) {
+          return res.status(403).json({ ok: false, message: 'El alumno no pertenece a tu curso' });
+        }
+
+        const normalizedGrade = numericGrade.toFixed(1).replace('.', ',');
+        db.run(
+          'INSERT INTO grades (userId, subject, item, date, grade, status) VALUES (?, ?, ?, ?, ?, ?)',
+          [parsedStudentId, course.subject, normalizedItem, normalizedDate, normalizedGrade, 'Publicada'],
+          function (insertError) {
+            if (insertError) {
+              return res.status(500).json({ ok: false, message: 'No se pudo registrar la calificación' });
+            }
+            res.status(201).json({
+              ok: true,
+              message: 'Calificación registrada',
+              grade: {
+                id: this.lastID,
+                subject: course.subject,
+                item: normalizedItem,
+                date: normalizedDate,
+                grade: normalizedGrade,
+                status: 'Publicada'
+              }
+            });
+          }
+        );
+      }
+    );
+  });
 });
 
 app.get('/api/posts', authenticate, (_req, res) => {
@@ -346,16 +620,22 @@ app.post('/api/posts', authenticate, (req, res) => {
 });
 
 app.post('/api/notices', authenticate, (req, res) => {
+  const today = currentChileDate();
+  if (!isAcademicDate(today)) {
+    return res.status(403).json({ ok: false, message: 'No se pueden publicar avisos durante vacaciones ni fines de semana.' });
+  }
+
   const { title, body, author } = req.body || {};
   if (!title || !body) {
     return res.status(400).json({ ok: false, message: 'Título y cuerpo obligatorios' });
   }
 
-  db.run('INSERT INTO notices (title, body, author, date) VALUES (?, ?, ?, ?)', [title, body, author || 'Equipo docente', new Date().toLocaleString('es-ES', { dateStyle: 'short', timeStyle: 'short' })], function (error) {
+  const noticeDate = formatNoticeDate(new Date().toISOString().slice(0, 19).replace('T', ' '));
+  db.run('INSERT INTO notices (title, body, author, date) VALUES (?, ?, ?, ?)', [title, body, author || 'Equipo docente', noticeDate], function (error) {
     if (error) {
       return res.status(500).json({ ok: false, message: 'No se pudo guardar el aviso' });
     }
-    res.status(201).json({ ok: true, message: 'Aviso guardado', notice: { id: this.lastID, title, body, author: author || 'Equipo docente', date: 'Ahora' } });
+    res.status(201).json({ ok: true, message: 'Aviso guardado', notice: { id: this.lastID, title, body, author: author || 'Equipo docente', date: noticeDate } });
   });
 });
 

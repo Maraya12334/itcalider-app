@@ -51,7 +51,6 @@
     .password-toggle { background: none; border: 0; color: var(--blue); font-size: 10px; font-weight: 650; padding: 8px; position: absolute; right: 4px; top: 4px; }
     .submit { background: var(--blue); border: 0; border-radius: 9px; color: white; font-size: 12px; font-weight: 700; margin-top: 20px; padding: 13px; width: 100%; }
     .submit:hover { background: var(--blue-dark); }
-    .role-specific-field { margin-top: 10px; }
     .demo-note { background: #f4f6fb; border-radius: 8px; color: #79849a; font-size: 9px; line-height: 1.6; margin-top: 17px; padding: 10px 12px; }
     .form-error { color: #bb4b49; display: none; font-size: 10px; line-height: 1.5; margin-top: 9px; }
     .form-error.visible { display: block; }
@@ -79,33 +78,15 @@
       <form class="login-card" id="loginForm" novalidate>
         <div class="eyebrow">Bienvenido de vuelta</div>
         <h2>Inicia sesión</h2>
-        <p class="intro">Ingresa tus datos para identificar tu espacio académico.</p>
+        <p class="intro">Ingresa tu usuario y contraseña para acceder a tu espacio académico.</p>
 
-        <label for="givenName">Nombre(s)</label>
-        <input id="givenName" name="givenName" type="text" autocomplete="given-name" placeholder="Ej. Camila Andrea" required>
-
-        <label for="surname">Apellidos</label>
-        <input id="surname" name="surname" type="text" autocomplete="family-name" placeholder="Ej. Muñoz Pérez" required>
-
-        <label for="email">Correo institucional</label>
-        <input id="email" name="email" type="email" inputmode="email" autocapitalize="none" spellcheck="false" autocomplete="email" placeholder="nombre@instituto.cl" required>
+        <label for="email">Usuario (correo institucional)</label>
+        <input id="email" name="email" type="email" inputmode="email" autocapitalize="none" spellcheck="false" autocomplete="username" placeholder="nombre@instituto.cl" required>
 
         <label for="password">Contraseña</label>
-        <div class="input-wrap"><input class="password" id="password" name="password" type="password" autocomplete="current-password" minlength="6" placeholder="Ingresa tu contraseña" required><button class="password-toggle" type="button" id="passwordToggle">Mostrar</button></div>
+        <div class="input-wrap"><input class="password" id="password" name="password" type="password" autocomplete="current-password" placeholder="Ingresa tu contraseña" required><button class="password-toggle" type="button" id="passwordToggle">Mostrar</button></div>
 
-        <label for="role">Tipo de cuenta</label>
-        <select id="role" name="role">
-          <option value="student">Estudiante</option>
-          <option value="teacher">Docente</option>
-        </select>
-
-        <div id="roleSpecificField" class="role-specific-field">
-          <label for="studentClass" id="roleSpecificLabel">Clase</label>
-          <input id="studentClass" name="studentClass" type="text" autocomplete="off" placeholder="Ej. 3° B" maxlength="40">
-          <input id="teacherSubject" name="teacherSubject" type="text" autocomplete="off" placeholder="Ej. Matemática" maxlength="40" style="display:none;">
-        </div>
-
-        <div class="form-error" id="formError" role="alert">Revisa tus datos: nombre, correo válido y clase/asignatura requerida.</div>
+        <div class="form-error" id="formError" role="alert">Ingresa un usuario válido y tu contraseña.</div>
         <button class="submit" type="submit">Iniciar sesión &nbsp; →</button>
         <div class="demo-note">Autenticación local con backend SQLite y sesión segura en el navegador. Este proyecto es una implementación funcional local de demostración, no un sistema institucional real.</div>
       </form>
@@ -142,24 +123,6 @@
       }
     }
 
-    const roleField = document.getElementById('role');
-    const studentClassInput = document.getElementById('studentClass');
-    const teacherSubjectInput = document.getElementById('teacherSubject');
-    const roleSpecificLabel = document.getElementById('roleSpecificLabel');
-
-    function updateRoleSpecificField() {
-      const isTeacher = roleField.value === 'teacher';
-      roleSpecificLabel.textContent = isTeacher ? 'Asignatura' : 'Clase';
-      studentClassInput.style.display = isTeacher ? 'none' : 'block';
-      teacherSubjectInput.style.display = isTeacher ? 'block' : 'none';
-      studentClassInput.disabled = isTeacher;
-      teacherSubjectInput.disabled = !isTeacher;
-      studentClassInput.required = !isTeacher;
-      teacherSubjectInput.required = isTeacher;
-    }
-
-    roleField.addEventListener('change', updateRoleSpecificField);
-
     document.getElementById('passwordToggle').addEventListener('click', event => {
       const password = document.getElementById('password');
       password.type = password.type === 'password' ? 'text' : 'password';
@@ -170,17 +133,11 @@
       event.preventDefault();
       const form = event.currentTarget;
       const formData = new FormData(form);
-      const givenName = String(formData.get('givenName') || '').trim();
-      const surname = String(formData.get('surname') || '').trim();
       const email = String(formData.get('email') || '').trim();
-      const password = String(formData.get('password') || '').trim();
-      const role = formData.get('role') === 'teacher' ? 'teacher' : 'student';
-      const classOrSubject = role === 'teacher'
-        ? String(formData.get('teacherSubject') || '').trim()
-        : String(formData.get('studentClass') || '').trim();
+      const password = String(formData.get('password') || '');
 
       const emailIsValid = /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
-      const isValid = givenName && surname && emailIsValid && password.length >= 6 && classOrSubject;
+      const isValid = emailIsValid && password.length > 0;
 
       if (!isValid) {
         document.getElementById('formError').classList.add('visible');
@@ -195,13 +152,8 @@
           },
           credentials: 'include',
           body: JSON.stringify({
-            givenName,
-            surname,
             email,
-            password,
-            role,
-            className: role === 'student' ? classOrSubject : '3° B',
-            subject: role === 'teacher' ? classOrSubject : 'Matemática'
+            password
           })
         });
 
@@ -224,7 +176,6 @@
     });
 
     redirectIfLoggedIn();
-    updateRoleSpecificField();
   </script>
 </body>
 </html>
