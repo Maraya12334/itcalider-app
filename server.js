@@ -59,6 +59,10 @@ app.get('/login.html', (_req, res) => {
   res.sendFile(path.join(__dirname, 'login.html'));
 });
 
+app.get('/ITN_Logo.png', (_req, res) => {
+  res.sendFile(path.join(__dirname, 'ITN_Logo.png'));
+});
+
 app.get('/index.html', (_req, res) => {
   res.sendFile(path.join(__dirname, 'index.html'));
 });
